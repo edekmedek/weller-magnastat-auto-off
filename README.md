@@ -1,46 +1,67 @@
 # Weller Magnastat Auto-Off
 
-Automatsko gasenje grijaca stare Weller Magnastat lemne stanice kada rucka ostane u stalku.
+Automatsko isključivanje grijača Weller Magnastat lemne stanice nakon 10 minuta bez promjene reed kontakta, neovisno o položaju ručke.
 
 ## Kako radi
 
-- Rucka izvan stalka: grijanje je ukljuceno
-- Rucka na stalku: reed kontakt se zatvara i built-in LED svijetli
-- Pokrece se timer od 10 minuta
-- Nakon 10 minuta relej iskljucuje grijac
-- Podizanjem rucke grijac se odmah ponovno ukljucuje i timer se resetira
+- Pri uključivanju uređaja relej uključuje grijač i pokreće brojač od 10 minuta.
+- Svaka promjena reed kontakta (otvaranje ili zatvaranje) resetira brojač na 10 minuta.
+- Promjene kontakta kraće od 50 ms ignoriraju se radi sprječavanja lažnih očitanja.
+- Ako tijekom 10 minuta nema promjene reed kontakta, relej isključuje grijač.
+- Sljedeća promjena reed kontakta ponovno uključuje grijač i pokreće novo odbrojavanje.
+- Ugrađena LED na D13 svijetli kada je reed kontakt zatvoren.
+
+Ovakva logika sprječava nepotreban rad grijača kada je ručka nepravilno položena u stalak pa reed kontakt ne registrira njezin položaj.
+
+**Napomena:** Ako se lemilica koristi dulje od 10 minuta bez promjene reed kontakta, grijač će se također isključiti.
 
 ## Hardver
 
 - Weller Magnastat lemna stanica
-- Napon grijaca: 25.3 VAC
-- Arduino Nano ATmega328P / CH340
-- Processor: ATmega328P (Old Bootloader)
-- HW-482 5 V relay module
+- Napon grijača: 25,3 V AC
+- RF Nano / Arduino Nano ATmega328P
+- USB-serijski adapter CH340
+- Procesor: ATmega328P (Old Bootloader)
+- HW-482 relejni modul 5 V
 - Reed kontakt i magnet
-- 5 V napajanje za Nano i relej
+- Napajanje 5 V za Nano i relej
 
 ## Spojevi
 
-Reed kontakt: D2 - reed - GND
+| Funkcija | Priključak |
+|---|---|
+| Reed kontakt | D2 – reed – GND |
+| Relej | D7 – IN |
+| Napajanje releja | 5 V – VCC, GND – GND |
+| Kontrolna LED | D13 |
 
-Relej: D7 - IN, 5V - VCC, GND - GND
+Jedan vod napajanja grijača od 25,3 V AC prekida se preko COM/NO kontakata releja.
 
-Built-in LED D13 pokazuje stanje reed kontakta.
+## Parametri programa
 
-Jedan vod 25.3 VAC prema grijacu prekida se preko COM/NO kontakata releja.
+- `REED_PIN = 2`
+- `RELAY_PIN = 7`
+- `LED_PIN = 13`
+- `VRIJEME_GASENJA = 600000UL` (10 minuta)
+- `DEBOUNCE_MS = 50UL` (filtriranje reed kontakta)
 
-## Pinovi
-
-- D2: reed kontakt (INPUT_PULLUP)
-- D7: relej
-- D13: built-in LED
-- Auto-off: 600000 ms / 10 minuta
+Relej je uključen kada je izlaz D7 HIGH, a isključen kada je LOW.
 
 ## Program
 
-Arduino program nalazi se u: weller-auto-off/weller-auto-off.ino
+Arduino program nalazi se u:
+
+`weller-auto-off/weller-auto-off.ino`
+
+## Testiranje
+
+Nova verzija programa testirana je na RF Nanu 17.10.2026.
+
+- Isključivanje releja nakon 10 minuta bez promjene reed kontakta – uspješno.
+- Ponovno uključivanje releja nakon promjene reed kontakta – uspješno.
 
 ## Sigurnost
 
-Arduino i relejni modul napajaju se s 5 V. Relej prekida 25.3 VAC vod grijaca. Originalna Weller Magnastat regulacija temperature ostaje nepromijenjena.
+Arduino i relejni modul napajaju se s 5 V. Relej prekida vod grijača od 25,3 V AC. Originalna Weller Magnastat regulacija temperature ostaje nepromijenjena.
+
+Softverski timer nije neovisna sigurnosna zaštita. Potrebno je provjeriti ponašanje releja pri uključivanju, resetiranju i gubitku napajanja Arduina.
